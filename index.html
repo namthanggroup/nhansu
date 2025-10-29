@@ -9,78 +9,172 @@
       margin: 0;
       padding: 0;
       height: 100%;
-      background-color: #000; /* optional: tránh nháy trắng khi load */
+      background-color: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
-    /* Khung bao toàn màn hình */
     .app-wrapper {
       position: relative;
       width: 100%;
-      height: 100vh; /* full viewport height */
+      height: 100vh;
       overflow: hidden;
     }
 
-    /* AppSheet chiếm toàn bộ màn hình */
     .appsheet-frame {
       position: absolute;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100%;
       height: 100%;
       border: none;
     }
 
-    /* YouTube ẩn */
     .bg-audio-frame {
       position: absolute;
       width: 1px;
       height: 1px;
-      left: -9999px;   /* đẩy ra ngoài khung nhìn */
+      left: -9999px;
       top: -9999px;
       border: 0;
+    }
+
+    .status-box {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      font-size: 12px;
+      line-height: 1.4;
+      padding: 8px 10px;
+      border-radius: 6px;
+      min-width: 180px;
+      z-index: 9999;
+      user-select: none;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+
+    .playing-dot { background: #00ff4a; }
+    .paused-dot { background: #ff4444; }
+    .loading-dot { background: #ffcc00; }
+
+    /* Overlay full màn hình, trong suốt */
+    #autoplayOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0);
+      z-index: 9998;
+      display: none; /* chỉ hiển thị khi bị chặn autoplay */
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
 
   <div class="app-wrapper">
-    <!-- Iframe YouTube chạy nền, tắt tiếng, auto-play -->
-   <iframe
-  id="ytPlayer"
-  src="https://www.youtube.com/embed/rRH_MMpZRs4?enablejsapi=1&autoplay=1&mute=0"
-  style="width:1px;height:1px;position:absolute;left:-9999px;"
-  allow="autoplay"
-></iframe>
 
-<script src="https://www.youtube.com/iframe_api"></script>
-<script>
-  let player;
-  function onYouTubeIframeAPIReady() {
-    player = new YT.Player('ytPlayer', {
-      events: {
-        'onReady': (event) => console.log('✅ Player ready'),
-        'onStateChange': (event) => {
-          if (event.data === YT.PlayerState.PLAYING) {
-            console.log('🎵 YouTube đang phát ngầm');
-          } else if (event.data === YT.PlayerState.PAUSED) {
-            console.log('⏸ Video tạm dừng');
-          } else if (event.data === YT.PlayerState.ENDED) {
-            console.log('🔁 Video kết thúc');
-          }
-        }
-      }
-    });
-  }
-</script>
+    <div id="ytStatus" class="status-box">
+      <span id="ytDot" class="status-dot loading-dot"></span>
+      <span id="ytText">Đang khởi chạy...</span>
+    </div>
 
+    <!-- Overlay full màn hình -->
+    <!--<div id="autoplayOverlay" title="Chạm để bật autoplay"></div>-->
+	<div id="autoplayOverlay" title="."></div>
+    <iframe
+      id="ytPlayer"
+      class="bg-audio-frame"
+      src="https://www.youtube.com/embed/rRH_MMpZRs4?enablejsapi=1&autoplay=1&mute=1&loop=1&playlist=rRH_MMpZRs4"
+      allow="autoplay"
+    ></iframe>
 
-    <!-- Iframe AppSheet chính -->
     <iframe
       class="appsheet-frame"
       src="https://www.appsheet.com/start/a99d9f48-bfe6-42f6-a438-815352f95bb2"
       allowfullscreen
     ></iframe>
   </div>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+
+  <script>
+    let player;
+    let hasStartedPlaying = false;
+
+    function setStatus(msg, mode) {
+      const dot = document.getElementById('ytDot');
+      const text = document.getElementById('ytText');
+      const overlay = document.getElementById('autoplayOverlay');
+
+      text.textContent = msg;
+      dot.classList.remove('loading-dot','playing-dot','paused-dot');
+
+      if (mode === 'loading') dot.classList.add('loading-dot');
+      else if (mode === 'playing') dot.classList.add('playing-dot');
+      else if (mode === 'paused') dot.classList.add('paused-dot');
+      else if (mode === 'blocked') dot.classList.add('paused-dot');
+
+      // nếu bị chặn autoplay → hiển thị overlay full màn hình
+      if (mode === 'blocked') {
+        overlay.style.display = 'block';
+      } else {
+        overlay.style.display = 'none';
+      }
+    }
+
+    function tryPlay() {
+      if (player && player.playVideo) {
+        try { player.playVideo(); } catch (e) {}
+      }
+    }
+
+    function retryPlayWindow() {
+      const start = Date.now();
+      setStatus('Đang khởi chạy...', 'loading');
+
+      const interval = setInterval(() => {
+        if (hasStartedPlaying) { clearInterval(interval); return; }
+
+        const elapsed = Date.now() - start;
+        if (elapsed > 5000 && !hasStartedPlaying) {
+          clearInterval(interval);
+		  setStatus('..', 'blocked');
+          <!--setStatus('Trình duyệt đang chặn autoplay. Hãy chạm vào màn hình để bật.', 'blocked');-->
+          return;
+        }
+
+        tryPlay();
+      }, 500);
+    }
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('ytPlayer', {
+        events: {
+          'onReady': () => retryPlayWindow(),
+          'onStateChange': (event) => {
+            if (event.data === YT.PlayerState.PLAYING) {
+              hasStartedPlaying = true;
+              setStatus('🟢 App đang hoạt động', 'playing');
+            } else if (event.data === YT.PlayerState.PAUSED && hasStartedPlaying) {
+              setStatus('⏸ Pause', 'paused');
+            }
+          }
+        }
+      });
+    }
+
+    // Khi user chạm màn hình → play lại + ẩn overlay
+    document.getElementById('autoplayOverlay').addEventListener('pointerdown', () => {
+      setStatus('App đang bật...', 'loading');
+      tryPlay();
+    });
+  </script>
 
 </body>
 </html>
