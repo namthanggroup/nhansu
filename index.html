@@ -9,17 +9,55 @@
       margin: 0;
       padding: 0;
       height: 100%;
+      background-color: #000; /* optional: tránh nháy trắng khi load */
     }
-    iframe {
+
+    /* Khung bao toàn màn hình */
+    .app-wrapper {
+      position: relative;
+      width: 100%;
+      height: 100vh; /* full viewport height */
+      overflow: hidden;
+    }
+
+    /* AppSheet chiếm toàn bộ màn hình */
+    .appsheet-frame {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
       border: none;
     }
+
+    /* YouTube ẩn */
+    .bg-audio-frame {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      left: -9999px;   /* đẩy ra ngoài khung nhìn */
+      top: -9999px;
+      border: 0;
+    }
   </style>
 </head>
 <body>
-  <!-- Phần tiêu đề nằm trên iframe -->
- 
-  </div>  <iframe src="https://www.appsheet.com/start/a99d9f48-bfe6-42f6-a438-815352f95bb2" allowfullscreen></iframe>
+
+  <div class="app-wrapper">
+    <!-- Iframe YouTube chạy nền, tắt tiếng, auto-play -->
+    <iframe
+      class="bg-audio-frame"
+      src="https://www.youtube.com/embed/rRH_MMpZRs4?autoplay=1&mute=1&loop=1&playlist=rRH_MMpZRs4"
+      allow="autoplay"
+    ></iframe>
+
+    <!-- Iframe AppSheet chính -->
+    <iframe
+      class="appsheet-frame"
+      src="https://www.appsheet.com/start/a99d9f48-bfe6-42f6-a438-815352f95bb2"
+      allowfullscreen
+    ></iframe>
+  </div>
+
 </body>
 </html>
