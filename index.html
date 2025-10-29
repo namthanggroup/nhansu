@@ -45,11 +45,34 @@
 
   <div class="app-wrapper">
     <!-- Iframe YouTube chạy nền, tắt tiếng, auto-play -->
-    <iframe
-      class="bg-audio-frame"
-      src="https://www.youtube.com/embed/rRH_MMpZRs4?autoplay=1&mute=1&loop=1&playlist=rRH_MMpZRs4"
-      allow="autoplay"
-    ></iframe>
+   <iframe
+  id="ytPlayer"
+  src="https://www.youtube.com/embed/rRH_MMpZRs4?enablejsapi=1&autoplay=1&mute=1"
+  style="width:1px;height:1px;position:absolute;left:-9999px;"
+  allow="autoplay"
+></iframe>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+  let player;
+  function onYouTubeIframeAPIReady() {
+    player = new YT.Player('ytPlayer', {
+      events: {
+        'onReady': (event) => console.log('✅ Player ready'),
+        'onStateChange': (event) => {
+          if (event.data === YT.PlayerState.PLAYING) {
+            console.log('🎵 YouTube đang phát ngầm');
+          } else if (event.data === YT.PlayerState.PAUSED) {
+            console.log('⏸ Video tạm dừng');
+          } else if (event.data === YT.PlayerState.ENDED) {
+            console.log('🔁 Video kết thúc');
+          }
+        }
+      }
+    });
+  }
+</script>
+
 
     <!-- Iframe AppSheet chính -->
     <iframe
